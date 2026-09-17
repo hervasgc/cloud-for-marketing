@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Nova execução{% endblock %}
+{% block content %}
+  <div class="eyebrow">Nova execução</div>
+  <h1>Suba a base do cliente e dê um nome para esta execução</h1>
+  <p class="subtitle">O CSV precisa ter, no mínimo, uma coluna de identificação do cliente, uma de data de transação e uma de valor. Na próxima tela você escolhe quais colunas são essas.</p>
+
+  {% if errors %}
+    <div class="errors">
+      <span class="label">Antes de continuar</span>
+      <ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+      <div class="field">
+        <label for="run_name">Nome da execução</label>
+        <input type="text" id="run_name" name="run_name" placeholder="ex.: cliente-acme-piloto-set-2026" value="{{ run_name or '' }}" required />
+        <div class="hint">Vira o nome da pasta em <code>output/</code> onde os resultados desta execução ficam salvos.</div>
+      </div>
+      <div class="field">
+        <label for="csv_file">Arquivo CSV</label>
+        <input type="file" id="csv_file" name="csv_file" accept=".csv" required />
+        <div class="hint">Dado de exemplo do repositório: <code>samples/input_cdnow.csv</code></div>
+      </div>
+      <button type="submit">Continuar →</button>
+    </form>
+  </div>
+{% endblock %}

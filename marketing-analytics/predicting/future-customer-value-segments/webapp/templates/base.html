@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FoCVS · {% block title %}{% endblock %}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    --bg:#F6F7F5; --surface:#FFFFFF; --surface-alt:#EDEFEA;
+    --ink:#16211F; --ink-muted:#4B5957; --ink-soft:#7C8B88; --border:#D8DED9;
+    --accent:#1F6F63; --accent-soft:#E4EFEC;
+    --accent-2:#C98A2C; --accent-2-soft:#F7ECDA;
+    --good:#2E7D4F; --good-soft:#E2F0E5;
+    --critical:#A8452F; --critical-soft:#F5E4DF;
+    --shadow: 0 1px 2px rgba(22,33,31,0.04), 0 8px 24px -12px rgba(22,33,31,0.14);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0F1614; --surface:#17211E; --surface-alt:#1D2B26;
+      --ink:#E9EEE9; --ink-muted:#A9B7B2; --ink-soft:#7E9490; --border:#2B3934;
+      --accent:#4FB3A0; --accent-soft:rgba(79,179,160,0.14);
+      --accent-2:#E3A94A; --accent-2-soft:rgba(227,169,74,0.14);
+      --good:#6FCB93; --good-soft:rgba(111,203,147,0.14);
+      --critical:#E08774; --critical-soft:rgba(224,135,116,0.14);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.55);
+    }
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans', system-ui, sans-serif; font-size:16px; line-height:1.6;}
+  a{color:var(--accent);}
+  .shell{max-width:760px; margin:0 auto; padding:0 24px 88px;}
+
+  nav.top{
+    display:flex; align-items:center; justify-content:space-between;
+    max-width:760px; margin:0 auto; padding:26px 24px 22px;
+    border-bottom:1px solid var(--border); margin-bottom:40px;
+  }
+  nav.top .brand{font-family:'Fraunces', serif; font-weight:600; font-size:17px; text-decoration:none; color:var(--ink);}
+  nav.top .brand span{color:var(--accent);}
+  nav.top .links{display:flex; gap:20px; font-family:'IBM Plex Mono', monospace; font-size:13px;}
+  nav.top .links a{color:var(--ink-muted); text-decoration:none;}
+  nav.top .links a:hover{color:var(--ink);}
+
+  .eyebrow{font-family:'IBM Plex Mono', monospace; font-size:12px; text-transform:uppercase; letter-spacing:0.1em; color:var(--accent); margin-bottom:12px;}
+  h1{font-family:'Fraunces', serif; font-weight:500; font-size:clamp(24px,3.4vw,30px); line-height:1.2; letter-spacing:-0.01em; text-wrap:balance; margin:0 0 10px;}
+  .subtitle{color:var(--ink-muted); font-size:15px; max-width:60ch; margin:0 0 32px;}
+
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px; box-shadow:var(--shadow);}
+  .field{margin-bottom:20px;}
+  .field label{display:block; font-family:'IBM Plex Mono', monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-muted); margin-bottom:7px;}
+  .field .hint{font-size:12.5px; color:var(--ink-soft); margin-top:6px;}
+  input[type="text"], input[type="number"], select{
+    width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+    background:var(--surface); color:var(--ink); font-family:'IBM Plex Sans', sans-serif; font-size:14.5px;
+  }
+  input[type="file"]{
+    width:100%; padding:10px 0; font-family:'IBM Plex Sans', sans-serif; font-size:14px; color:var(--ink-muted);
+  }
+  input:focus, select:focus{outline:2px solid var(--accent); outline-offset:1px;}
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  .grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px;}
+  @media (max-width:560px){ .grid-2, .grid-3{grid-template-columns:1fr;} }
+
+  button, .btn{
+    font-family:'IBM Plex Sans', sans-serif; font-weight:600; font-size:14.5px;
+    background:var(--accent); color:var(--bg); border:none; border-radius:8px;
+    padding:12px 22px; cursor:pointer; text-decoration:none; display:inline-block;
+  }
+  button:hover, .btn:hover{filter:brightness(1.08);}
+  .btn.secondary{background:transparent; color:var(--ink); border:1px solid var(--border);}
+
+  .errors{background:var(--critical-soft); border:1px solid color-mix(in srgb, var(--critical) 40%, var(--border)); border-radius:10px; padding:14px 18px; margin-bottom:24px;}
+  .errors .label{font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--critical); display:block; margin-bottom:6px;}
+  .errors ul{margin:0; padding-left:18px; color:var(--ink);}
+
+  code{font-family:'IBM Plex Mono', monospace; font-size:0.9em; background:var(--surface-alt); padding:1px 5px; border-radius:4px;}
+
+  .section-title{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--accent); text-transform:uppercase; letter-spacing:0.08em; margin:32px 0 14px;}
+
+  .run-list{display:flex; flex-direction:column;}
+  .run-row{display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:18px 24px; border-bottom:1px solid var(--border);}
+  .run-row:last-child{border-bottom:none;}
+  .run-name{font-weight:600; font-size:15px; min-width:0; overflow-wrap:anywhere;}
+  .run-meta{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-soft); margin-top:3px;}
+  .run-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .status-pill{font-family:'IBM Plex Mono', monospace; font-size:11.5px; padding:4px 10px; border-radius:100px; white-space:nowrap;}
+  .status-pill.ok{color:var(--good); background:var(--good-soft);}
+  .status-pill.failed{color:var(--critical); background:var(--critical-soft);}
+  .status-pill.unknown{color:var(--ink-soft); background:var(--surface-alt);}
+</style>
+</head>
+<body>
+<nav class="top">
+  <a class="brand" href="{{ url_for('index') }}">FoCVS <span>· piloto local</span></a>
+  <div class="links">
+    <a href="{{ url_for('index') }}">Nova execução</a>
+    <a href="{{ url_for('list_runs') }}">Execuções</a>
+  </div>
+</nav>
+<div class="shell">
+  {% block content %}{% endblock %}
+</div>
+</body>
+</html>

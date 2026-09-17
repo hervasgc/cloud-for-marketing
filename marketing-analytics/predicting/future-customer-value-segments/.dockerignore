@@ -1,0 +1,7 @@
+focvs-env/
+env/
+output/
+.work/
+**/__pycache__/
+*.pyc
+.git/

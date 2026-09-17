@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Mapear colunas{% endblock %}
+{% block content %}
+  <div class="eyebrow">Execução "{{ run_name }}"</div>
+  <h1>Confirme o que cada coluna significa</h1>
+  <p class="subtitle">Arquivo enviado: <code>{{ source_filename }}</code>. Pré-selecionamos um palpite para cada campo com base nos nomes das colunas — confira antes de rodar.</p>
+
+  <form action="{{ url_for('run_pipeline') }}" method="post">
+    <input type="hidden" name="token" value="{{ token }}" />
+    <input type="hidden" name="run_name" value="{{ run_name }}" />
+    <input type="hidden" name="source_filename" value="{{ source_filename }}" />
+
+    <div class="card">
+      <div class="section-title">Colunas obrigatórias</div>
+      <div class="grid-3">
+        <div class="field">
+          <label for="customer_id_column">Cliente (ID estável)</label>
+          <select id="customer_id_column" name="customer_id_column" required>
+            {% for i, h in headers %}
+              <option value="{{ i }}" {% if guesses.customer_id == i %}selected{% endif %}>{{ h }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="transaction_date_column">Data da transação</label>
+          <select id="transaction_date_column" name="transaction_date_column" required>
+            {% for i, h in headers %}
+              <option value="{{ i }}" {% if guesses.transaction_date == i %}selected{% endif %}>{{ h }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="sales_column">Valor da transação</label>
+          <select id="sales_column" name="sales_column" required>
+            {% for i, h in headers %}
+              <option value="{{ i }}" {% if guesses.sales == i %}selected{% endif %}>{{ h }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title">Opcional</div>
+      <div class="field">
+        <label for="extra_dimension_column">Dimensão extra (canal, categoria, polo...)</label>
+        <select id="extra_dimension_column" name="extra_dimension_column">
+          <option value="none">Nenhuma</option>
+          {% for i, h in headers %}
+            <option value="{{ i }}" {% if guesses.extra_dimension == i %}selected{% endif %}>{{ h }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="section-title">Parâmetros do modelo</div>
+      <div class="grid-2">
+        <div class="field">
+          <label for="date_parsing_pattern">Formato da data</label>
+          <input list="date-patterns" id="date_parsing_pattern" name="date_parsing_pattern" value="YYYY-MM-DD" />
+          <datalist id="date-patterns">
+            {% for p in date_pattern_suggestions %}<option value="{{ p }}"></option>{% endfor %}
+          </datalist>
+        </div>
+        <div class="field">
+          <label for="model_time_granularity">Granularidade</label>
+          <select id="model_time_granularity" name="model_time_granularity">
+            {% for value, label in granularities %}
+              <option value="{{ value }}" {% if value == 'weekly' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="frequency_model_type">Modelo de frequência</label>
+          <select id="frequency_model_type" name="frequency_model_type">
+            {% for value, label in frequency_models %}
+              <option value="{{ value }}" {% if value == 'MBGNBD' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="prediction_period">Horizonte de previsão (períodos)</label>
+          <input type="number" id="prediction_period" name="prediction_period" value="52" min="1" />
+        </div>
+        <div class="field">
+          <label for="output_segments">Número de segmentos</label>
+          <input type="number" id="output_segments" name="output_segments" value="5" min="2" max="20" />
+        </div>
+        <div class="field">
+          <label for="transaction_frequency_threshold">Limite de erro aceitável (MAPE %)</label>
+          <input type="number" id="transaction_frequency_threshold" name="transaction_frequency_threshold" value="15" min="1" max="100" />
+        </div>
+        <div class="field">
+          <label for="penalizer_coef">Coeficiente de penalização</label>
+          <input type="number" id="penalizer_coef" name="penalizer_coef" value="0.0" min="0" step="0.01" />
+          <div class="hint">Suba este valor se a validação falhar por não-convergência do modelo.</div>
+        </div>
+      </div>
+
+      <button type="submit">Rodar pipeline →</button>
+      <div class="hint" style="margin-top:14px;">Pode levar de alguns segundos a alguns minutos, dependendo do tamanho da base. A página só avança quando a execução terminar.</div>
+    </div>
+  </form>
+{% endblock %}

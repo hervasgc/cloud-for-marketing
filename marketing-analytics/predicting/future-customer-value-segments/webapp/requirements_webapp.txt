@@ -1,0 +1,12 @@
+# Extra dependency for the local web UI (webapp/app.py).
+# Install into the same venv used for the pipeline itself:
+#   source focvs-env/bin/activate
+#   pip install -r webapp/requirements_webapp.txt
+#
+# report.py has no dependency beyond the standard library and does not need
+# this file -- it's only for the Flask UI in app.py.
+Flask==3.0.3
+
+# Production WSGI server used by the Dockerfile on Cloud Run. Not needed for
+# local development (python webapp/app.py uses Flask's own dev server).
+gunicorn==22.0.0

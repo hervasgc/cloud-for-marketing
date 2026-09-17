@@ -14,14 +14,17 @@
 # limitations under the License.
 
 
-if [ -d "./output" ]; then
-  rm -fr ./output
+RUN_NAME="${1:-sample-cdnow}"
+OUTPUT_DIR="./output/${RUN_NAME}/"
+
+if [ -d "${OUTPUT_DIR}" ]; then
+  rm -fr "${OUTPUT_DIR}"
 fi
-mkdir ./output
+mkdir -p "${OUTPUT_DIR}"
 
 python fcvs_pipeline_csv.py --runner=DirectRunner \
   --input_csv ./samples/input_cdnow.csv \
-  --output_folder ./output/ \
+  --output_folder "${OUTPUT_DIR}" \
   --customer_id_column_position 1 \
   --transaction_date_column_position 2 \
   --sales_column_position 4 \
@@ -29,3 +32,6 @@ python fcvs_pipeline_csv.py --runner=DirectRunner \
   --model_time_granularity weekly \
   --penalizer_coef 0.0 \
   --extra_dimension_column_position 3
+
+python webapp/report.py --output_folder "${OUTPUT_DIR}" --run_name "${RUN_NAME}"
+echo "Report: ${OUTPUT_DIR}report.html"

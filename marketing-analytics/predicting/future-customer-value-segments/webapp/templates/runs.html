@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Execuções{% endblock %}
+{% block content %}
+  <div class="eyebrow">Histórico</div>
+  <h1>Execuções salvas em output/</h1>
+  <p class="subtitle">Cada execução tem sua própria pasta, nomeada a partir do nome que você deu a ela.</p>
+
+  {% if not runs %}
+    <div class="card">
+      <p style="margin:0; color:var(--ink-muted);">Nenhuma execução ainda. <a href="{{ url_for('index') }}">Rode a primeira</a>.</p>
+    </div>
+  {% else %}
+    <div class="card" style="padding:0;">
+      <div class="run-list">
+      {% for r in runs %}
+        <div class="run-row">
+          <div class="run-name">{{ r.name }}
+            <div class="run-meta">output/{{ r.slug }}/ · {{ r.created_at }}</div>
+          </div>
+          <div class="run-actions">
+            {% if r.status == 'ok' %}
+              <span class="status-pill ok">concluída</span>
+              <a class="btn secondary" href="{{ url_for('view_run', slug=r.slug) }}">Ver relatório</a>
+            {% elif r.status == 'failed' %}
+              <span class="status-pill failed">falhou</span>
+              <a class="btn secondary" href="{{ url_for('view_run', slug=r.slug) }}">Ver log</a>
+            {% else %}
+              <span class="status-pill unknown">incompleta</span>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+{% endblock %}

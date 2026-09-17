@@ -1,4 +1,6 @@
 **/__pycache__/
 env/
+focvs-env/
 output/
+.work/
 beam-temp-output*/
