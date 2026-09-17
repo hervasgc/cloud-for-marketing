@@ -1,0 +1,46 @@
+name: Deploy FoCVS to Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'marketing-analytics/predicting/future-customer-value-segments/**'
+      - '.github/workflows/deploy-focvs.yml'
+
+env:
+  PROJECT_ID: radiant-tide-401723
+  REGION: southamerica-east1
+  SERVICE: focvs
+  RUNTIME_SA: github-sentimento-analise@radiant-tide-401723.iam.gserviceaccount.com
+  BUCKET: radiant-tide-401723-focvs-runs
+  SOURCE_DIR: marketing-analytics/predicting/future-customer-value-segments
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy
+        run: |
+          gcloud run deploy "$SERVICE" \
+            --source "$SOURCE_DIR" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --no-allow-unauthenticated \
+            --service-account "$RUNTIME_SA" \
+            --execution-environment gen2 \
+            --add-volume=name=focvs-data,type=cloud-storage,bucket="$BUCKET" \
+            --add-volume-mount=volume=focvs-data,mount-path=/mnt/focvs-output \
+            --set-env-vars=FOCVS_RUNS_DIR=/mnt/focvs-output,FOCVS_WORK_DIR=/tmp/focvs-work \
+            --memory=2Gi --cpu=2 --timeout=3600 --max-instances=3

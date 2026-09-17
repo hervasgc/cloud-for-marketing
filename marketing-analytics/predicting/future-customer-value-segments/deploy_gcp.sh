@@ -1,77 +1,58 @@
 #!/usr/bin/env bash
-# Deploys the FoCVS web UI + pipeline to Cloud Run.
+# Manual/one-off deploy of the FoCVS web UI + pipeline to Cloud Run.
 #
-# What this script does:
-#   1. Enables the required GCP APIs.
-#   2. Creates a Cloud Storage bucket to durably store run outputs
-#      (output/<run-name>/ lives here instead of the container's ephemeral
-#      disk, mounted straight into the container as a volume).
-#   3. Creates a dedicated, least-privilege service account for the Cloud Run
-#      service (read/write access to that one bucket only).
-#   4. Builds the container from the Dockerfile in this folder and deploys it
-#      to Cloud Run, PRIVATE (--no-allow-unauthenticated) -- nobody can call
-#      it until you gate it with Identity-Aware Proxy (see the printed next
-#      steps, or the deployment guide artifact).
+# The canonical deploy path is .github/workflows/deploy-focvs.yml (runs on
+# every push to main that touches this folder). Use this script only for a
+# one-off deploy from your own machine -- e.g. to test a change before
+# pushing, or to bootstrap the Cloud Storage bucket the first time.
 #
-# Usage:
-#   PROJECT_ID=my-gcp-project ./deploy_gcp.sh
+# Reuses the same service account as the rest of the org's GCP prototypes in
+# this project (github-sentimento-analise) -- see PROJECT_CONTEXT.md in the
+# AI-Youtube-Shorts-Generator repo for why. No new service account or IAM
+# binding is created by this script.
 #
-# Optional overrides (env vars):
-#   REGION        default: us-central1
+# Usage (defaults match the confirmed plan; override any of these env vars):
+#   ./deploy_gcp.sh
+#
+#   PROJECT_ID    default: radiant-tide-401723
+#   REGION        default: southamerica-east1
 #   SERVICE_NAME  default: focvs
 #   BUCKET_NAME   default: ${PROJECT_ID}-focvs-runs
+#   RUNTIME_SA    default: github-sentimento-analise@${PROJECT_ID}.iam.gserviceaccount.com
 
 set -euo pipefail
 
-: "${PROJECT_ID:?Set PROJECT_ID, e.g. PROJECT_ID=my-project ./deploy_gcp.sh}"
-: "${REGION:=us-central1}"
+: "${PROJECT_ID:=radiant-tide-401723}"
+: "${REGION:=southamerica-east1}"
 : "${SERVICE_NAME:=focvs}"
 : "${BUCKET_NAME:=${PROJECT_ID}-focvs-runs}"
-SA_NAME="focvs-run-sa"
-SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
+: "${RUNTIME_SA:=github-sentimento-analise@${PROJECT_ID}.iam.gserviceaccount.com}"
 
-echo "== Project:  ${PROJECT_ID}"
-echo "== Region:   ${REGION}"
-echo "== Service:  ${SERVICE_NAME}"
-echo "== Bucket:   gs://${BUCKET_NAME}"
-echo "== Runtime SA: ${SA_EMAIL}"
+echo "== Project:    ${PROJECT_ID}"
+echo "== Region:     ${REGION}"
+echo "== Service:    ${SERVICE_NAME}"
+echo "== Bucket:     gs://${BUCKET_NAME}"
+echo "== Runtime SA: ${RUNTIME_SA}"
 echo
 
 gcloud config set project "${PROJECT_ID}" >/dev/null
 
-echo "-- Enabling required APIs (safe to re-run)"
-gcloud services enable \
-  run.googleapis.com \
-  cloudbuild.googleapis.com \
-  artifactregistry.googleapis.com \
-  storage.googleapis.com \
-  iap.googleapis.com
-
 echo "-- Ensuring output bucket exists"
 if ! gcloud storage buckets describe "gs://${BUCKET_NAME}" >/dev/null 2>&1; then
-  gcloud storage buckets create "gs://${BUCKET_NAME}" --location="${REGION}"
+  gcloud storage buckets create "gs://${BUCKET_NAME}" \
+    --location="${REGION}" \
+    --uniform-bucket-level-access \
+    --public-access-prevention
 else
   echo "   gs://${BUCKET_NAME} already exists, skipping."
 fi
 
-echo "-- Ensuring runtime service account exists"
-if ! gcloud iam service-accounts describe "${SA_EMAIL}" >/dev/null 2>&1; then
-  gcloud iam service-accounts create "${SA_NAME}" \
-    --display-name="FoCVS Cloud Run runtime"
-else
-  echo "   ${SA_EMAIL} already exists, skipping."
-fi
-
-echo "-- Granting the runtime SA read/write on the bucket only"
-gcloud storage buckets add-iam-policy-binding "gs://${BUCKET_NAME}" \
-  --member="serviceAccount:${SA_EMAIL}" \
-  --role="roles/storage.objectAdmin" >/dev/null
-
 echo "-- Building and deploying to Cloud Run (this builds the Dockerfile via Cloud Build)"
 gcloud run deploy "${SERVICE_NAME}" \
   --source . \
+  --project "${PROJECT_ID}" \
   --region "${REGION}" \
-  --service-account "${SA_EMAIL}" \
+  --service-account "${RUNTIME_SA}" \
   --execution-environment gen2 \
   --no-allow-unauthenticated \
   --add-volume=name=focvs-data,type=cloud-storage,bucket="${BUCKET_NAME}" \
@@ -82,7 +63,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --timeout=3600 \
   --max-instances=3
 
-SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format='value(status.url)')
+SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(status.url)')
 
 cat <<EOF
 
@@ -104,5 +85,6 @@ Próximos passos (uma vez só, feitos pelo console GCP):
   3. Reabra ${SERVICE_URL} -- agora exige login Google antes de mostrar a tela
      de upload.
 
-Para atualizar o serviço depois de mudar o código, rode este script de novo.
+Deploys seguintes: só dê push na main (.github/workflows/deploy-focvs.yml
+cuida do resto). Rode este script de novo apenas para um deploy manual pontual.
 EOF
