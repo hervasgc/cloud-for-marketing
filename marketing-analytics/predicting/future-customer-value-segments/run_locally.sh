@@ -33,5 +33,5 @@ python fcvs_pipeline_csv.py --runner=DirectRunner \
   --penalizer_coef 0.0 \
   --extra_dimension_column_position 3
 
-python webapp/report.py --output_folder "${OUTPUT_DIR}" --run_name "${RUN_NAME}"
+python webapp/report.py --output_folder "${OUTPUT_DIR}" --run_name "${RUN_NAME}" --slug "${RUN_NAME}"
 echo "Report: ${OUTPUT_DIR}report.html"

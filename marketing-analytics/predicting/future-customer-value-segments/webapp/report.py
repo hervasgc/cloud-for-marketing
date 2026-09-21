@@ -150,8 +150,12 @@ def _extract_customers_transactions(validation_params, prediction_params):
     return _to_int_display(cust_val), _to_int_display(txn_val)
 
 
-def generate(output_folder, run_name=None):
-    """Builds report.html inside output_folder. Returns the report path."""
+def generate(output_folder, run_name=None, slug=None):
+    """Builds report.html inside output_folder. Returns the report path.
+
+    slug: if provided, used to generate download links (/runs/<slug>/download/<filename>).
+          If omitted, download links are not included.
+    """
     output_folder = output_folder if output_folder.endswith('/') else output_folder + '/'
     run_name = run_name or os.path.basename(os.path.normpath(output_folder))
 
@@ -288,6 +292,13 @@ def generate(output_folder, run_name=None):
     meta_rows = [('Nome da execução', run_name), ('Gerado em', generated_at)]
     if meta.get('source_filename'):
         meta_rows.append(('Arquivo de origem', meta['source_filename']))
+
+    # Extract data period from validation_params
+    cohort_start = validation_params.get('Cohort Start Date', '')
+    holdout_end = validation_params.get('Holdout End Date', '')
+    if cohort_start and holdout_end:
+        meta_rows.append(('Período dos dados', f'{cohort_start} até {holdout_end}'))
+
     if meta.get('column_mapping'):
         cm = meta['column_mapping']
         labels = {
@@ -301,6 +312,106 @@ def generate(output_folder, run_name=None):
     meta_rows_html = ''.join(
         f'<div class="meta-row"><span class="meta-k">{k}</span><span class="meta-v">{v}</span></div>'
         for k, v in meta_rows)
+
+    # --- Prediction Parameters section ---
+    params_section = ''
+    if prediction_params:
+        param_rows = []
+
+        # Model info row
+        model_info = []
+        if 'Prediction for' in prediction_params:
+            model_info.append(f"Horizonte: {prediction_params['Prediction for']}")
+        if 'Model Time Granularity' in prediction_params:
+            model_info.append(f"Granularidade: {prediction_params['Model Time Granularity']}")
+        if 'Frequency Model' in prediction_params:
+            model_info.append(f"Modelo: {prediction_params['Frequency Model']}")
+        if model_info:
+            param_rows.append(f'<div class="param-row"><strong>Configuração do modelo</strong></div>')
+            for info in model_info:
+                param_rows.append(f'<div class="param-item">{info}</div>')
+
+        # Data info row
+        data_info = []
+        if 'Customers modeled' in prediction_params:
+            data_info.append(f"Clientes modelados: {prediction_params['Customers modeled']}")
+        if 'Transactions observed' in prediction_params:
+            data_info.append(f"Transações observadas: {prediction_params['Transactions observed']}")
+        if data_info:
+            param_rows.append(f'<div class="param-row"><strong>Dados utilizados</strong></div>')
+            for info in data_info:
+                param_rows.append(f'<div class="param-item">{info}</div>')
+
+        # Frequency Model Parameters
+        freq_params = {k: v for k, v in prediction_params.items() if k in ['r', 'alpha', 'a', 'b']}
+        if freq_params:
+            param_rows.append(f'<div class="param-row"><strong>Parâmetros do modelo de frequência</strong></div>')
+            for key, val in freq_params.items():
+                try:
+                    display_val = f'{float(val):.6f}'
+                except (ValueError, TypeError):
+                    display_val = val
+                param_rows.append(f'<div class="param-item"><code>{key}</code> = {display_val}</div>')
+
+        # Gamma-Gamma Parameters
+        gg_params = {k: v for k, v in prediction_params.items() if k in ['p', 'q', 'v']}
+        if gg_params:
+            param_rows.append(f'<div class="param-row"><strong>Parâmetros Gamma-Gamma</strong></div>')
+            for key, val in gg_params.items():
+                try:
+                    display_val = f'{float(val):.6f}'
+                except (ValueError, TypeError):
+                    display_val = val
+                param_rows.append(f'<div class="param-item"><code>{key}</code> = {display_val}</div>')
+
+        if param_rows:
+            params_section = f'''
+  <section>
+    <div class="kicker">Configuração</div>
+    <h2>Parâmetros da previsão</h2>
+    <p class="lede">Detalhes técnicos do modelo ajustado durante a execução.</p>
+    <div class="params-panel">
+{''.join(param_rows)}
+    </div>
+  </section>'''
+
+    # --- Files & Downloads section ---
+    files_section = ''
+    if slug:
+        file_labels = {
+            'input.csv': 'Dados de entrada (CSV original)',
+            'prediction_summary.csv': 'Resumo de previsões',
+            'prediction_summary_extra_dimension.csv': 'Resumo por dimensão extra',
+            'prediction_by_customer.csv': 'Previsões por cliente',
+            'prediction_params.txt': 'Parâmetros da previsão',
+            'validation_params.txt': 'Parâmetros de validação',
+            'pipeline.log': 'Log da execução do pipeline',
+            'repeat_transactions_over_time.png': 'Gráfico: Recompras ao longo do tempo',
+            'repeat_cumulative_transactions_over_time.png': 'Gráfico: Recompras acumuladas',
+        }
+        file_rows = []
+        for fname in [
+            'input.csv', 'prediction_summary.csv', 'prediction_summary_extra_dimension.csv',
+            'prediction_by_customer.csv', 'prediction_params.txt', 'validation_params.txt',
+            'pipeline.log', 'repeat_transactions_over_time.png', 'repeat_cumulative_transactions_over_time.png'
+        ]:
+            if os.path.isfile(output_folder + fname):
+                label = file_labels.get(fname, fname)
+                download_url = f'/runs/{slug}/download/{fname}'
+                file_rows.append(f'''      <div class="file-row">
+        <span class="file-label">{label}</span>
+        <a class="btn-download" href="{download_url}">Baixar</a>
+      </div>''')
+        if file_rows:
+            files_section = f'''
+  <section>
+    <div class="kicker">Saída</div>
+    <h2>Arquivos e dados gerados</h2>
+    <p class="lede">Todos os arquivos produzidos por esta execução estão disponíveis para download.</p>
+    <div class="files-list">
+{''.join(file_rows)}
+    </div>
+  </section>'''
 
     html = _TEMPLATE
     replacements = {
@@ -322,6 +433,8 @@ def generate(output_folder, run_name=None):
         '__SEGMENT_TABLE_ROWS__': ''.join(table_rows),
         '__EXTRA_DIMENSION_SECTION__': extra_dim_section,
         '__DIAGNOSTIC_SECTION__': diag_section,
+        '__PARAMS_SECTION__': params_section,
+        '__FILES_SECTION__': files_section,
     }
     for token, value in replacements.items():
         html = html.replace(token, str(value))
@@ -443,6 +556,18 @@ __SEG_CSS_DARK__
   .callout .label{font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.07em; display:block; margin-bottom:6px; color:var(--accent);}
   .callout p{margin:0; max-width:none; color:var(--ink);}
 
+  .params-panel{display:flex; flex-direction:column; gap:16px; margin-top:20px; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:18px; font-size:14px;}
+  .param-row{font-weight:600; color:var(--ink); margin-top:12px; margin-bottom:6px; font-size:13px;}
+  .param-row:first-child{margin-top:0;}
+  .param-item{color:var(--ink-muted); font-size:13.5px; padding:4px 0; display:flex; align-items:center; gap:8px;}
+  .param-item code{font-family:'IBM Plex Mono', monospace; background:var(--surface-alt); padding:2px 6px; border-radius:4px; color:var(--accent);}
+
+  .files-list{display:flex; flex-direction:column; gap:10px; margin-top:20px;}
+  .file-row{display:flex; align-items:center; justify-content:space-between; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 14px; font-size:14px;}
+  .file-label{color:var(--ink); flex:1;}
+  .btn-download{background:var(--accent); color:var(--bg); border:none; border-radius:6px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; display:inline-block; white-space:nowrap; transition:filter 0.15s ease;}
+  .btn-download:hover{filter:brightness(1.08);}
+
   footer{margin-top:60px; padding-top:20px; border-top:1px solid var(--border); color:var(--ink-soft); font-size:12.5px; font-family:'IBM Plex Mono', monospace;}
   footer a{color:var(--ink-soft);}
 </style>
@@ -488,6 +613,8 @@ __SEG_CSS_DARK__
   </section>
 __EXTRA_DIMENSION_SECTION__
 __DIAGNOSTIC_SECTION__
+__PARAMS_SECTION__
+__FILES_SECTION__
 
   <footer>Gerado automaticamente por webapp/report.py a partir da saída de fcvs_pipeline_csv.py · __GENERATED_AT__</footer>
 </div>
@@ -512,8 +639,10 @@ def main():
                          help='Folder containing the pipeline output files.')
     parser.add_argument('--run_name', default=None,
                          help='Display name for this run (default: folder name).')
+    parser.add_argument('--slug', default=None,
+                         help='Run slug for download URLs (e.g. /runs/<slug>/download/<file>).')
     args = parser.parse_args()
-    path = generate(args.output_folder, args.run_name)
+    path = generate(args.output_folder, args.run_name, slug=args.slug)
     print(f'Report written to {path}')
 
 

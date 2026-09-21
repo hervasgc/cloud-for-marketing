@@ -58,6 +58,7 @@ DOWNLOADABLE_FILES = (
     'input.csv', 'prediction_summary.csv',
     'prediction_summary_extra_dimension.csv', 'prediction_by_customer.csv',
     'prediction_params.txt', 'validation_params.txt', 'pipeline.log',
+    'repeat_transactions_over_time.png', 'repeat_cumulative_transactions_over_time.png',
 )
 
 FREQUENCY_MODELS = [
@@ -291,7 +292,7 @@ def run_pipeline():
             'error.html', run_name=run_name, slug=slug,
             log_tail=log_text[-6000:], hint=hint)
 
-    report.generate(target_dir, run_name)
+    report.generate(target_dir, run_name, slug=slug)
     shutil.move(target_dir.rstrip(os.sep), os.path.join(RUNS_STORE_DIR, slug))
     return redirect(url_for('view_run', slug=slug))
 
