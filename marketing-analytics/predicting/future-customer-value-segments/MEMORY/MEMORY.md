@@ -1,0 +1,4 @@
+- [Perfil do usuário](user_profile.md) — Gustavo, agência de marketing, desenvolvimento prático
+- [Piloto FoCVS com clientes](project_focvs_overview.md) — Objetivo de testar CLV com clientes reais; próxima fase: pilotos controlados
+- [GitHub Actions + GCP deployment](reference_github_deployment.md) — CI/CD automático via Actions; Cloud Run em southamerica-east1; bucket focvs-runs para persistência
+- [Relatório com parâmetros e downloads](feedback_report_design.md) — Usuário validou design de seções de parâmetros, período dos dados, downloads; padrão estabelecido
